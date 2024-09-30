@@ -1,5 +1,6 @@
 """Configuration of folder structure of QUEENS experiments."""
 
+import os
 import logging
 from pathlib import Path
 
@@ -14,7 +15,13 @@ TESTS_BASE_FOLDER_NAME = "tests"
 
 def base_directory():
     """Hold all queens related data."""
-    base_dir = Path().home() / BASE_DATA_DIR
+    try:
+        os.environ["FULL_BASE_DATA_DIR"]
+    except NameError:
+        base_dir = Path().home() / BASE_DATA_DIR
+    else:
+        base_dir = Path(os.environ["FULL_BASE_DATA_DIR"])
+
     create_directory(base_dir)
     return base_dir
 
