@@ -13,7 +13,7 @@ class MeshPyDriver(MpiDriver):
     """Driver to run a generic MeshPy/CubitPy run"""
 
     @log_init_args
-    def __init__(self, parameters, meshpy_model, **kwargs):
+    def __init__(self, meshpy_model, *, parameters=None, **kwargs):
         """Initialize MeshPyDriver object and store the function to be evaluated.
 
         Args
@@ -43,7 +43,10 @@ class MeshPyDriver(MpiDriver):
         output_dir_from_queens.rmdir()
 
         # Sample with dictionary
-        sample_dict = self.parameters.sample_as_dict(sample)
+        if self.parameters is None:
+            sample_dict = {"sample": sample}
+        else:
+            sample_dict = self.parameters.sample_as_dict(sample)
 
         # Setup the queens metadata
         metadata = SimulationMetadata(
@@ -70,10 +73,7 @@ class MeshPyDriver(MpiDriver):
 
         # Run the forward model
         with metadata.time_code("run_forward_model"):
-            keys = list(sample_dict.keys())
-            keys.sort()
-            q = [sample_dict[key] for key in keys]
-            result = self.meshpy_model(meshpy_logger, job_dir, q)
+            result = self.meshpy_model(meshpy_logger, job_dir, sample)
             metadata.outputs = result
 
         # Finish the logger
