@@ -44,7 +44,10 @@ def base_directory():
               ├── test_name_1
               └── test_name_2
     """
-    base_dir = Path().home() / BASE_DATA_DIR
+    if Path(BASE_DATA_DIR).is_absolute():
+        base_dir = Path(BASE_DATA_DIR)
+    else:
+        base_dir = Path().home() / BASE_DATA_DIR
     create_directory(base_dir)
     return base_dir
 
