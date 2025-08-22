@@ -53,6 +53,22 @@ class Simulation(Model):
         self.response = self.scheduler.evaluate(samples, driver=self.driver)
         return self.response
 
+    def evaluate_no_wait(self, samples):
+        """Evaluate model with current set of input samples.
+
+        Args:
+            samples (np.ndarray): Input samples
+
+        Returns:
+            response (dict): Response of the underlying model at input samples
+        """
+        self.scheduler.evaluate_no_wait(samples, driver=self.driver)
+
+    def wait_evaluation(self):
+        """Wait for the evaluation to finish and get the response."""
+        self.response = self.scheduler.wait_evaluation()
+        return self.response
+
     def grad(self, samples, upstream_gradient):
         r"""Evaluate gradient of model w.r.t. current set of input samples.
 

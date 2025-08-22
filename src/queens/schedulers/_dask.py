@@ -130,7 +130,84 @@ class Dask(Scheduler):
                 }
                 _logger.info(
                     get_str_table(
-                        f"Batch summary for jobs {min(job_ids)} - {max(job_ids)}", run_time_dict
+                        f"Batch summary for jobs {min(job_ids)} - {max(job_ids)}",
+                        run_time_dict,
+                    )
+                )
+
+        result_dict = {"result": [], "gradient": []}
+        for result in results.values():
+            # We should remove this squeeze! It is only introduced for consistency with old test.
+            result_dict["result"].append(np.atleast_1d(np.array(result[0]).squeeze()))
+            result_dict["gradient"].append(result[1])
+        result_dict["result"] = np.array(result_dict["result"])
+        result_dict["gradient"] = np.array(result_dict["gradient"])
+        return result_dict
+
+    def evaluate_no_wait(self, samples, driver, job_ids=None):
+        """Submit jobs to driver.
+
+        Args:
+            samples (np.array): Array of samples
+            driver (Driver): Driver object that runs simulation
+            job_ids (lst, opt): List of job IDs corresponding to samples
+
+        Returns:
+            result_dict (dict): Dictionary containing results
+        """
+        if self.restart_workers:
+            # This is necessary, because the subprocess in the driver does not get killed
+            # sometimes when the worker is restarted.
+            def run_driver(*args, **kwargs):
+                time.sleep(5)
+                return driver.run(*args, **kwargs)
+
+        else:
+            run_driver = driver.run
+
+        if job_ids is None:
+            job_ids = self.get_job_ids(len(samples))
+        self.futures = self.client.map(
+            run_driver,
+            samples,
+            job_ids,
+            pure=False,
+            num_procs=self.num_procs,
+            experiment_dir=self.experiment_dir,
+            experiment_name=self.experiment_name,
+        )
+
+        self.n_samples = len(samples)
+        self.job_ids = job_ids
+
+    def wait_evaluation(self):
+        # The theoretical number of sequential jobs
+        num_sequential_jobs = int(np.ceil(self.n_samples / self.num_jobs))
+
+        results = {future.key: None for future in self.futures}
+        with tqdm.tqdm(total=len(self.futures)) as progressbar:
+            for future in as_completed(self.futures):
+                results[future.key] = future.result()
+                progressbar.update(1)
+                if self.restart_workers:
+                    worker = list(self.client.who_has(future).values())[0]
+                    self.restart_worker(worker)
+
+            if self.verbose:
+                elapsed_time = progressbar.format_dict["elapsed"]
+                averaged_time_per_job = elapsed_time / num_sequential_jobs
+
+                run_time_dict = {
+                    "number of jobs": self.n_samples,
+                    "number of parallel jobs": self.num_jobs,
+                    "number of procs": self.num_procs,
+                    "total elapsed time": f"{elapsed_time:.3e}s",
+                    "average time per parallel job": f"{averaged_time_per_job:.3e}s",
+                }
+                _logger.info(
+                    get_str_table(
+                        f"Batch summary for jobs {min(self.job_ids)} - {max(self.job_ids)}",
+                        run_time_dict,
                     )
                 )
 
