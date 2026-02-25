@@ -9,7 +9,9 @@ from dask_jobqueue import SLURMCluster
 
 from queens.schedulers._dask import Dask
 from queens.schedulers.cluster import VALID_WORKLOAD_MANAGERS, timedelta_to_str
-from queens.utils.config_directories import experiment_directory  # Do not change this import!
+from queens.utils.config_directories import (
+    experiment_directory,  # Do not change this import!
+)
 from queens.utils.logger_settings import log_init_args
 from queens.utils.remote_operations import get_port
 from queens.utils.rsync import rsync
@@ -18,13 +20,13 @@ _logger = logging.getLogger(__name__)
 
 
 class CharonScheduler(Dask):
-    """
-    """
+    """ """
 
     @log_init_args
     def __init__(
         self,
-        experiment_name,*,
+        experiment_name,
+        *,
         env={},
         n_processors=None,
         n_nodes=None,
@@ -38,7 +40,8 @@ class CharonScheduler(Dask):
         cluster_internal_address=None,
         restart_workers=False,
         allowed_failures=5,
-        **kwargs
+        job_extra_directives=None,
+        **kwargs,
     ):
         """Init method for the cluster scheduler.
         The total number of cores per job is given by num_procs*num_nodes.
@@ -90,7 +93,8 @@ class CharonScheduler(Dask):
             job_script_prologue.append(f'export {key}="{item}"')
 
         # Add SLURM options
-        job_extra_directives = []
+        if job_extra_directives is None:
+            job_extra_directives = []
         if n_processors is not None:
             job_extra_directives.append(f"--ntasks={n_processors}")
         else:
@@ -114,13 +118,11 @@ class CharonScheduler(Dask):
             worker_extra_args=(
                 ["--memory-limit", "auto"]
             ),  # Since we use an arbirtrary memory above, we redefine the worker memory to auto here
-            log_directory= str(experiment_dir),
+            log_directory=str(experiment_dir),
             **kwargs,
         )
 
         try:
-
-
             dask_jobscript = experiment_dir / "dask_jobscript.sh"
             _logger.info("Writing dask jobscript to:")
             _logger.info(dask_jobscript)
