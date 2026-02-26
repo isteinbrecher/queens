@@ -116,7 +116,7 @@ class CharonScheduler(Dask):
             job_name=experiment_name + "_worker",
             # interface="ibp179s0",  # Use the infiniband interface
             worker_extra_args=(
-                ["--memory-limit", "auto"]
+                ["--memory-limit", 0]
             ),  # Since we use an arbirtrary memory above, we redefine the worker memory to auto here
             log_directory=str(experiment_dir),
             **kwargs,
